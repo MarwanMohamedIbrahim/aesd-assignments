@@ -64,13 +64,11 @@ bool do_exec(int count, ...)
         va_end(args);
         return false;
     } else if (pid == 0) {
-        // Child process
         if (execv(command[0], command) == -1) {
             perror("execv");
             exit(1);
         }
     } else {
-        // Parent process
         int status;
         if (waitpid(pid, &status, 0) == -1) {
             perror("waitpid");
@@ -120,7 +118,7 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
     // and may be removed
     command[count] = command[count];
 
-    //int kidpid;
+    
     int fd = open(outputfile, O_WRONLY|O_TRUNC|O_CREAT, 0644);
     if (fd < 0) 
     { 
@@ -135,8 +133,7 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
         va_end(args);
         return false;
     } else if (pid == 0) {
-        // Child process
-        // Redirect stdout to the output file
+       
         if (dup2(fd, STDOUT_FILENO) == -1) {
             perror("dup2");
             close(fd);

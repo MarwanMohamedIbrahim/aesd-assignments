@@ -15,8 +15,8 @@
 */
 bool do_system(const char *cmd)
 {
-    int a = system(cmd);
-    if(a == 0)
+    int check = system(cmd);
+    if(check == 0)
         return true;
 /*
  * TODO  add your code here

@@ -1,4 +1,10 @@
 #include "systemcalls.h"
+#include<fcntl.h>
+
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <stdlib.h>
 
 /**
  * @param cmd the command to execute with system()
@@ -9,7 +15,9 @@
 */
 bool do_system(const char *cmd)
 {
-
+    int a = system(cmd);
+    if(a == 0)
+        return true;
 /*
  * TODO  add your code here
  *  Call the system() function with the command set in the cmd
@@ -17,7 +25,7 @@ bool do_system(const char *cmd)
  *   or false() if it returned a failure
 */
 
-    return true;
+    return false;
 }
 
 /**
@@ -49,6 +57,34 @@ bool do_exec(int count, ...)
     // and may be removed
     command[count] = command[count];
 
+    pid_t pid =  fork();
+
+    if (pid == -1) {
+        perror("fork");
+        va_end(args);
+        return false;
+    } else if (pid == 0) {
+        // Child process
+        if (execv(command[0], command) == -1) {
+            perror("execv");
+            exit(1);
+        }
+    } else {
+        // Parent process
+        int status;
+        if (waitpid(pid, &status, 0) == -1) {
+            perror("waitpid");
+            va_end(args);
+            return false;
+        }
+        if (WIFEXITED(status)) {
+            int exit_status = WEXITSTATUS(status);
+            if (exit_status == 0) {
+                va_end(args);
+                return true;
+            }
+        }
+    }
 /*
  * TODO:
  *   Execute a system command by calling fork, execv(),
@@ -61,7 +97,7 @@ bool do_exec(int count, ...)
 
     va_end(args);
 
-    return true;
+    return false;
 }
 
 /**
@@ -84,7 +120,54 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
     // and may be removed
     command[count] = command[count];
 
+    //int kidpid;
+    int fd = open(outputfile, O_WRONLY|O_TRUNC|O_CREAT, 0644);
+    if (fd < 0) 
+    { 
+        perror("open"); 
+        va_end(args);
+        return false; 
+    }
+    pid_t pid = fork();
+    if (pid == -1) {
+        perror("fork");
+        close(fd);
+        va_end(args);
+        return false;
+    } else if (pid == 0) {
+        // Child process
+        // Redirect stdout to the output file
+        if (dup2(fd, STDOUT_FILENO) == -1) {
+            perror("dup2");
+            close(fd);
+            va_end(args);
+            exit(1);
+        }
+        close(fd);
 
+         if (execv(command[0], command) == -1) {
+            perror("execv");
+            exit(1);
+        }
+    } else {
+        // Parent process
+        int status;
+        if (waitpid(pid, &status, 0) == -1) {
+            perror("waitpid");
+            close(fd);
+            va_end(args);
+            return false;
+        }
+        close(fd);
+
+        if (WIFEXITED(status)) {
+            int exit_status = WEXITSTATUS(status);
+            if (exit_status == 0) {
+                va_end(args);
+                return true;
+            }
+        }
+    }
 /*
  * TODO
  *   Call execv, but first using https://stackoverflow.com/a/13784315/1446624 as a refernce,
